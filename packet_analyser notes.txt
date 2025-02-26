@@ -1,0 +1,250 @@
+Notes of the packet analyser
+1. Importing Libraries
+
+
+import tkinter as tk
+from tkinter import ttk, messagebox
+from scapy.all import sniff, IP, TCP, UDP
+import threading
+import csv
+
+from collections import defaultdict
+
+Tkinter: Used for creating the GUI (Graphical User Interface) of the packet sniffer, like buttons, tables, and text areas.
+
+Scapy: A powerful library for network packet manipulation. We use it to sniff (capture) packets and analyze them.
+
+Threading: Helps in running packet sniffing in a separate thread so the GUI stays responsive.
+
+CSV: To save the captured packets in a CSV file for later analysis.
+
+
+Defaultdict: Used to easily count how many packets each IP has sent.
+
+2. Global Variables
+
+
+sniffing = False
+packets = []
+ip_counts = defaultdict(int)  # Tracks IP packet frequency
+
+sniffing: A flag to control whether packet sniffing is active.
+
+packets: A list that stores each captured packet’s information.
+
+ip_counts: A dictionary that counts the number of packets coming from each IP address.
+
+3. Starting the Sniffer
+
+def start_sniffing():
+    global sniffing, packets, ip_counts
+    sniffing = True
+    packets = []
+    ip_counts.clear()
+    
+    start_button.config(state=tk.DISABLED)
+    stop_button.config(state=tk.NORMAL)
+
+    # Get interface name
+    interface = interface_entry.get().strip()
+    if not interface:
+        messagebox.showerror("Error", "Please enter a network interface.")
+        start_button.config(state=tk.NORMAL)
+        return
+    
+    # Start sniffing in a separate thread
+    thread = threading.Thread(target=sniff_packets, args=(interface,))
+    thread.start()
+
+start_sniffing: This function starts the packet sniffing process.
+
+It sets sniffing to True (indicating we’re actively sniffing).
+
+Resets packets to start fresh.
+
+It disables the "Start Sniffing" button while sniffing and enables the "Stop Sniffing" button.
+
+
+Interface: Takes the network interface name from the GUI input (Wi-Fi, eth0, etc.).
+
+Starts a new thread to run the sniffing process in the background (sniff_packets).
+
+4. Sniffing the Packets
+
+def sniff_packets(interface):
+    sniff(prn=process_packet, iface=interface, store=False, stop_filter=lambda x: not sniffing)
+
+sniff_packets: This function uses Scapy's sniff function to listen to the network.
+
+prn=process_packet: Each captured packet is passed to the process_packet function for processing.
+
+iface=interface: Captures packets from the given network interface.
+
+store=False: We don’t need to store packets in memory (we process them on the fly).
+
+stop_filter=lambda x: not sniffing: Stops sniffing when sniffing is False.
+
+5. Processing Each Packet
+
+
+
+def process_packet(packet):
+    if sniffing:
+        src_ip = packet[IP].src if packet.haslayer(IP) else "Unknown"
+        dst_ip = packet[IP].dst if packet.haslayer(IP) else "Unknown"
+        protocol = "TCP" if packet.haslayer(TCP) else "UDP" if packet.haslayer(UDP) else "Other"
+        packet_len = len(packet)
+        
+        # Track IP frequency
+        ip_counts[src_ip] += 1
+
+        # Vulnerability detection
+        vulnerabilities = detect_vulnerabilities(packet, src_ip)
+        
+        # Store packet info
+        packet_info = {
+            "Source IP": src_ip,
+            "Destination IP": dst_ip,
+            "Protocol": protocol,
+            "Packet Length": packet_len,
+            "Vulnerability": vulnerabilities
+        }
+        packets.append(packet_info)
+
+        # Update GUI
+        packet_table.insert("", "end", values=(src_ip, dst_ip, protocol, packet_len, vulnerabilities))
+
+process_packet: This function is called for every packet captured.
+\
+It extracts important details from the packet:
+
+src_ip: Source IP address
+
+dst_ip: Destination IP address
+
+protocol: TCP, UDP, or Other
+
+packet_len: Length of the packet
+
+IP Frequency: It tracks how many packets each IP has sent using ip_counts.
+
+Vulnerability Detection: Calls the detect_vulnerabilities function to analyze the packet for possible issues (like port scans, unencrypted HTTP, etc.).
+
+Stores packet info in the packets list and updates the GUI with the captured packet data.
+
+6. Detecting Vulnerabilities
+
+
+def detect_vulnerabilities(packet, src_ip):
+    alerts = []
+
+    # 1. Port Scan Detection (If one IP targets many different ports in short time)
+    if ip_counts[src_ip] > 10:
+        alerts.append("Possible Port Scan")
+
+    # 2. Unencrypted Traffic (HTTP instead of HTTPS)
+    if packet.haslayer(TCP) and packet.dport == 80:
+        alerts.append("Unsecured HTTP Traffic")
+
+    # 3. High Traffic from One Source (DDoS-like behavior)
+    if ip_counts[src_ip] > 50:
+        alerts.append("Possible DDoS Attack")
+
+    return ", ".join(alerts) if alerts else "None"
+
+detect_vulnerabilities: This function checks each packet for specific vulnerabilities:
+
+Port Scan Detection: If an IP is sending packets to multiple ports, it could be scanning ports.
+
+Unencrypted Traffic (HTTP): If a TCP packet is sent to port 80 (HTTP), it detects unsecured traffic.
+
+High Traffic (Possible DDoS): If an IP sends too many packets in a short time, it could indicate a DDoS attack.
+
+Returns a string with detected vulnerabilities, or "None" if nothing suspicious is found.
+
+
+7. Stopping Sniffing
+
+
+def stop_sniffing():
+    global sniffing
+    sniffing = False
+    start_button.config(state=tk.NORMAL)
+    stop_button.config(state=tk.DISABLED)
+stop_sniffing: Stops the sniffing process by setting sniffing to False, which stops the packet capture.
+Re-enables the "Start Sniffing" button and disables the "Stop Sniffing" button when sniffing stops.
+
+8. Saving Packets to CSV
+
+
+def save_to_csv():
+    if not packets:
+        messagebox.showwarning("Warning", "No packets to save!")
+        return
+    
+    filename = "captured_packets.csv"
+    with open(filename, "w", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=["Source IP", "Destination IP", "Protocol", "Packet Length", "Vulnerability"])
+        writer.writeheader()
+        writer.writerows(packets)
+    
+    messagebox.showinfo("Success", f"Packets saved to {filename}")
+
+
+save_to_csv: This function saves the captured packets in a CSV file.
+
+The CSV file contains the packet's source IP, destination IP, protocol, packet length, and any detected vulnerabilities.
+Success message pops up when the file is saved.
+
+
+9. GUI Setup
+
+
+root = tk.Tk()
+root.title("Advanced Network Packet Sniffer")
+root.geometry("700x400")
+
+# Interface Selection
+tk.Label(root, text="Enter Network Interface:").pack(pady=5)
+interface_entry = tk.Entry(root)
+interface_entry.pack(pady=5)
+
+# Buttons
+button_frame = tk.Frame(root)
+button_frame.pack(pady=10)
+start_button = tk.Button(button_frame, text="Start Sniffing", command=start_sniffing, bg="green", fg="white")
+start_button.grid(row=0, column=0, padx=5)
+stop_button = tk.Button(button_frame, text="Stop Sniffing", command=stop_sniffing, bg="red", fg="white", state=tk.DISABLED)
+stop_button.grid(row=0, column=1, padx=5)
+save_button = tk.Button(button_frame, text="Save to CSV", command=save_to_csv, bg="blue", fg="white")
+save_button.grid(row=0, column=2, padx=5)
+
+# Packet Table
+columns = ("Source IP", "Destination IP", "Protocol", "Packet Length", "Vulnerability")
+packet_table = ttk.Treeview(root, columns=columns, show="headings")
+for col in columns:
+    packet_table.heading(col, text=col)
+    packet_table.column(col, width=130)
+packet_table.pack(pady=10, fill="both", expand=True)
+
+# Run GUI
+root.mainloop()
+
+
+GUI Layout:
+Interface Selection: User can input the network interface they want to capture from (e.g., Wi-Fi).
+
+Buttons: Start Sniffing, Stop Sniffing, and Save to CSV.
+Packet Table: Displays packet info with details like source IP, protocol, and vulnerabilities.
+
+Mainloop: Runs the GUI window continuously.
+
+
+
+
+📚 Summary
+Capture network packets using Scapy.
+Analyze packets for vulnerabilities such as port scanning, unencrypted traffic, or DDoS-like behavior.
+Display results in a user-friendly GUI.
+Allow saving packets to a CSV file.
+Alert the user to suspicious activity.

@@ -1,0 +1,76 @@
+## **📜 Requirements & Notes for Your Packet Analyzer Project**  
+
+### **🔧 Dependencies Required**  
+Before running the program, you need to install the following dependencies:  
+
+```bash
+pip install scapy  
+pip install tk  
+pip install pandas  
+pip install matplotlib  
+```
+
+| Dependency | Purpose |
+|------------|---------|
+| `scapy` | Captures and analyzes network packets. |
+| `tkinter` | Provides a **Graphical User Interface (GUI)** for the packet sniffer. |
+| `pandas` | Saves and processes captured packets into a structured format (CSV). |
+| `matplotlib` | Generates **graphs and visualizations** of captured packet data. |
+
+---
+
+### **📂 Project Structure**
+| File Name | Description |
+|-----------|------------|
+| `main.py` | The core script with GUI, packet capturing, and vulnerability detection. |
+| `requirements.txt` | List of all required dependencies for easy installation. |
+| `README.md` | Project documentation and instructions. |
+| `logs/` | Directory where **captured packets** are saved in CSV format. |
+
+---
+
+### **📌 How It Works**
+1. **Start the Packet Sniffer**  
+   - Click **Start Sniffing** in the GUI.  
+   - It captures packets from **all available network interfaces** (Wi-Fi, Ethernet, etc.).  
+
+2. **View Packet Data**  
+   - The GUI **displays real-time packets**, including **source/destination IPs, protocols, and data**.  
+
+3. **Stop & Save Logs**  
+   - Clicking **Stop Sniffing** saves the captured packets into a **CSV file** for later analysis.  
+
+4. **Vulnerability Detection**  
+   - Identifies **insecure connections** (like HTTP instead of HTTPS).  
+   - Detects **suspicious IP addresses** or protocols.  
+
+---
+
+### **💻 Installation & Running the Program**
+1️⃣ **Clone the Repository**  
+```bash
+git clone https://github.com/syedrai/Packet-Analyzer.git  
+cd Packet-Analyzer  
+```
+
+2️⃣ **Install Dependencies**  
+```bash
+pip install -r requirements.txt  
+```
+
+3️⃣ **Run the Packet Analyzer**  
+```bash
+python main.py  
+```
+
+---
+
+### **📊 Future Improvements**
+✅ Add **Graphical Network Analysis** (Visualize packet traffic using Matplotlib).  
+✅ Implement **Machine Learning** to detect **malicious packets**.  
+✅ Allow **packet filtering** (capture only specific types of packets).  
+
+---
+
+This covers **everything you need** to understand the project and its requirements!  
+Let me know if you need more details! 🚀
