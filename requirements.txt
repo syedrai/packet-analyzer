@@ -2,9 +2,15 @@
 
 ### **🔧 Dependencies Required**  
 Before running the program, you need to install the following dependencies:  
+scapy
+tk
+psutil
+pandas
+matplotlib
+
 
 ```bash
-pip install scapy  
+pip install scapy,psutil  
 pip install tk  
 pip install pandas  
 pip install matplotlib  
